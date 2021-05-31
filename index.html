@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>五子棋</title>
+		<style type="text/css">
+			#can{
+				background-color: pink;
+				display: block;
+				margin: 30px auto;
+			}
+			input,button{
+				display: block;
+				margin: 5px auto;
+				outline: none;
+			}
+		</style>
+	</head>
+	<body>
+		<input id="chessboardSize" type="text" placeholder="输入棋盘的大小">
+		<input id="chessboardRAC" type="text" placeholder="输入棋盘地行数">
+		<button id="backOff" type="button">悔棋</button>
+		<button id="startOver" type="button">重新开始</button>
+		<canvas id="can" width="" height=""></canvas>
+	</body>
+	<script type="text/javascript">
+		var chessboardSize = document.getElementById("chessboardSize");
+		var chessboardRAC = document.getElementById("chessboardRAC");
+		var startOver = document.getElementById("startOver");
+		var can = document.getElementById("can");
+		var con = can.getContext("2d");
+		
+		/* 默认样式 */
+		var WH = 600; // 大小
+		var RC = 11; // 行数和列数
+		var chessWH; // 棋子的宽高
+		
+		/* 保存棋盘状态的数组 */
+		var chessArr;
+		
+		/* 保存棋盘数据的数组 */
+		var stateArrX = [];
+		var stateArrY = [];
+		
+		/* 黑棋先手 */
+		var blackFirst = true;
+		
+		/* 给input添加点击事件 */
+		chessboardSize.oninput = chessboardRAC.oninput = cuntomChessboard;
+		function cuntomChessboard(){
+			
+			WH = parseInt(chessboardSize.value>0?chessboardSize.value:600);
+			RC = parseInt(chessboardRAC.value>0?chessboardRAC.value:11);
+			
+			/* 根据得到的宽高和行列对棋盘进行布局 */
+			boardLayout();
+		}
+		boardLayout()
+		
+		/* 棋盘布局 */
+		function boardLayout(){
+			/* 画布大小 */
+			can.width = can.height =  WH;
+			
+			/* 棋盘的网格大小 */
+			chessWH = parseInt(WH/(RC+1));
+			for (var i = 1; i <= RC; i++) {
+				/* 起点坐标 */
+				var startX = chessWH;
+				var startY = chessWH * i;
+				
+				/* 终点坐标 */
+				var endX = chessWH * RC;
+				var endY = startY;
+				
+				/* 横向 */
+				con.moveTo(startX,startY);
+				con.lineTo(endX,endY);
+				
+				/* 竖向 */
+				con.moveTo(startY,startX);
+				con.lineTo(endY,endX);
+			}
+			con.stroke();
+			
+			/* 初始化棋盘的二维数组 */
+			chessArr = new Array(RC);
+			for (var i = 0; i < chessArr.length; i++) {
+				var tempArr = new Array(RC);
+				tempArr.fill(0);
+				chessArr[i] = tempArr;
+			}
+		}
+		
+		/* 棋盘单击事件 */
+		can.onclick = canvasOnclick;
+		function canvasOnclick(e){
+			e = e || event;
+			/* 获取鼠标位置坐标 */
+			var r = e.pageX - can.offsetLeft;
+			var c = e.pageY - can.offsetTop;
+			console.log(r,c);
+			
+			/* 绘制旗子位置坐标 */
+			var rows = Math.round(r/chessWH) * chessWH;
+			var cols = Math.round(c/chessWH) * chessWH;
+			console.log(rows,cols);
+			chessLayout(rows,cols);
+		}
+		
+		/* 根据得到的棋子下标绘制棋子 */
+		function chessLayout(x,y){
+			
+			var row = parseInt((y/chessWH)-1);
+			var col = parseInt((x/chessWH)-1);
+			console.log(row,col);
+			/* 判断单击处是否有棋子 */
+			if(chessArr[row][col] != 0){
+				alert('此处已有棋子');
+				return ;
+			}
+			/* 判断黑白棋 */
+			if(blackFirst){
+				con.fillStyle = 'black';
+				chessArr[row][col] = 1;
+			}else{
+				con.fillStyle = 'white';
+				chessArr[row][col] = 2;
+			}
+			stateArrX.push(row);
+			stateArrY.push(col);
+			console.log(chessArr);
+			con.beginPath()
+			con.arc(x,y,parseInt(chessWH*0.4),0,Math.PI*2);
+			con.fill();
+			
+			/* 判断胜负 */
+			setTimeout(function(){
+				judge(row,col)
+			},100);
+			
+			setTimeout(function(){
+				blackFirst = !blackFirst;
+			},150);
+			
+			console.log(chessArr);
+		}
+		
+		/* 判断胜负 */
+		function judge(row,col){
+			if(judgeRows(row,col) || judgeCols(row,col) || judgeSlantTo(row,col) || judgeToslant(row,col)){
+				alert(blackFirst?"黑棋获胜":"白棋获胜")
+				can.onclick = null;
+			}
+		}
+		
+		/* 判断行 */
+		function judgeRows(row,col){
+			var count = 0;
+			/* ----> */
+			for (var i = col; i < RC; i++) {
+				if(blackFirst + chessArr[row][i] == 2){
+					count ++;
+				}else{
+					break;
+				}
+			}
+			/* <---- */
+			for (var i = col - 1; i >= 0; i--) {
+				if(blackFirst + chessArr[row][i] == 2){
+					count ++;
+				}else{
+					break;
+				}
+			}
+			console.log(count);
+			return count >= 5;	
+		}
+		
+		/* 判断列 */
+		function judgeCols(row,col){
+			var count = 0;
+			for (var i = row; i < RC; i++) {
+				if(blackFirst + chessArr[i][col] == 2){
+					count ++;
+				}else{
+					break;
+				}
+			}
+			for (var i = row - 1; i >= 0; i--) {
+				if(blackFirst + chessArr[i][col] == 2){
+					count ++;
+				}else{
+					break;
+				}
+			}
+			return count >= 5;
+		}
+		
+		/* 判断正斜方向 */
+		function judgeSlantTo(row,col){
+			var count = 0;
+			for (var i = row,k = col; i < RC && k < RC; i++,k++) {
+				if(blackFirst + chessArr[i][k] == 2){
+					count ++;
+				}else{
+					break;
+				}
+			}
+			for (var i = row - 1,k = col - 1; i >= 0 && k >= 0; i--,k--) {
+				if(blackFirst + chessArr[i][k] == 2){
+					count ++;
+				}else{
+					break;
+				}
+			}
+			return count >= 5;
+		}
+		
+		/* 判断反斜方向 */
+		function judgeToslant(row,col){
+			var count = 0;
+			for(var i = row-1,k = col + 1; i >= 0 && k < RC;i--,k++){
+				if(blackFirst + chessArr[i][k] == 2){
+					count ++;
+				}else{
+					break;
+				}
+			}
+			for(var i = row, k = col; i < RC && k < RC;i++,k--){
+				if(blackFirst + chessArr[i][k] == 2){
+					count ++;
+				}else{
+					break;
+				}
+			}
+			return count >= 5;
+		}
+		
+		/* 悔棋 */
+		backOff.onclick = function(){
+			console.log(stateArrX,stateArrY);
+			var n = stateArrX.length;
+			var m = stateArrY.length;
+			console.log(stateArrX[n-1]);
+			console.log(stateArrY[m-1]);
+			chessArr[stateArrX[n-1]][stateArrY[m-1]] = 0
+			con.clear
+			blackFirst = !blackFirst;
+		}
+		
+		/* 重新开始 */
+		startOver.onclick = function(){
+			can.onclick = canvasOnclick;
+			boardLayout();
+			blackFirst = true;
+			stateArrX = [];
+			stateArrY = [];
+		}
+		
+	</script>
+</html>
